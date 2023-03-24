@@ -1,23 +1,36 @@
 package com.mquan.productmarket;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.material.navigation.NavigationView;
 import com.mquan.productmarket.apdater.CategoryAdapter;
 import com.mquan.productmarket.apdater.MainAdapter;
 import com.mquan.productmarket.api.CategoryService;
 import com.mquan.productmarket.api.ProductService;
 import com.mquan.productmarket.model.Category;
 import com.mquan.productmarket.model.Product;
+
 
 import java.util.List;
 import java.util.UUID;
@@ -34,8 +47,13 @@ public class MainActivity extends AppCompatActivity implements OnProductListener
     private TextView textHistory;
     private ImageView imgCart, menu;
     private SearchView searchView;
+
+    private DrawerLayout drawerLayout;
+    private ActionBarDrawerToggle toggle;
+    private NavigationView navigationView;
     private List<Product> listProducts;
     private List<Category> listCates;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,31 +70,125 @@ public class MainActivity extends AppCompatActivity implements OnProductListener
         editor.putString("USER_ID", this.userId);
         editor.apply();
 
-        textHistory = findViewById(R.id.text_history);
-        imgCart = findViewById(R.id.shopping_cart);
-        menu = findViewById(R.id.menu);
-        searchView = findViewById(R.id.search_view);
+        drawerLayout = findViewById(R.id.drawer_layout_home);
+        toggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.open, R.string.close);
+        drawerLayout.addDrawerListener(toggle);
+        toggle.syncState();
+
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+        navigationView = findViewById(R.id.nav);
+        navigationView.bringToFront();
+        navigationView.setNavigationItemSelectedListener(item -> {
+            switch (item.getItemId()) {
+                case R.id.login: {
+                    drawerLayout.close();
+                    startActivity(new Intent(MainActivity.this, LoginActivity.class));
+                    return true;
+                }
+                case R.id.order_history: {
+                    drawerLayout.close();
+                    startActivity(new Intent(MainActivity.this, OrderHistoryActivity.class));
+                    return true;
+                }
+            }
+            return true;
+        });
+
+//        textHistory = findViewById(R.id.text_history);
+//        imgCart = findViewById(R.id.shopping_cart);
+//        menu = findViewById(R.id.menu);
+//        searchView = findViewById(R.id.search_view);
         rcvProduct = findViewById(R.id.rcv_product);
         rcvCategory = findViewById(R.id.rcv_category);
 
-        textHistory.setOnClickListener(v -> {
-            Intent historyInput = new Intent(this, HistoryInputActivity.class);
-            startActivity(historyInput);
-        });
+//        textHistory.setOnClickListener(v -> {
+//            Intent historyInput = new Intent(this, HistoryInputActivity.class);
+//            startActivity(historyInput);
+//        });
 
-        imgCart.setOnClickListener(v -> {
-            Intent cart = new Intent(this, CartActivity.class);
-            startActivity(cart);
-        });
+//        imgCart.setOnClickListener(v -> {
+//            Intent cart = new Intent(this, CartActivity.class);
+//            startActivity(cart);
+//        });
 
-        menu.setOnClickListener(v -> {
-            Intent login = new Intent(this, LoginActivity.class);
-            startActivity(login);
-        });
+//        menu.setOnClickListener(v -> {
+//            Intent login = new Intent(this, LoginActivity.class);
+//            startActivity(login);
+//        });
 
 
 
         callApiProduct();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_nav, menu);
+        MenuItem searchItem = menu.findItem(R.id.search);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                Intent intent = new Intent(MainActivity.this, ProductDetailActivity.class);
+                intent.putExtra("query", query);
+                startActivity(intent);
+                finish();
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                // Xử lý khi thay đổi nội dung search query
+                return false;
+            }
+        });
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+
+        if (toggle.onOptionsItemSelected(item)) {
+            return true;
+        }
+
+
+        if (id == R.id.cart) {
+            startActivity(new Intent(MainActivity.this, CartActivity.class));
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+
+    private ActivityResultLauncher<Intent> activityResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (result != null) {
+                        //Làm gì đó khi có response trả về
+                    } else {
+                    }
+                }
+            }
+    );
+
+
+    private void confirmDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(true);
+        builder.setTitle("Thông báo");
+        builder.setMessage("Giỏ hàng trống.");
+        builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+            }
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
 
